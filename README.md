@@ -49,6 +49,8 @@ This project sets up a data scientist workbench with :
 - **JupyterLab:** `http:localhost:8888`
 - **MLflow:** `http:localhost:5555`
 - **MinIO:** `http:localhost:9000`
+Additionally, in the file `notebooks/tracking_example.py`, we demonstrate how to use MLflow efficiently.
+
 
 ## Services
 
