@@ -1,0 +1,9 @@
+Lorsque vous supprimez un conteneur Docker, les images associées ne sont pas automatiquement supprimées car plusieurs conteneurs peuvent être basés sur la même image.
+Si les images étaient automatiquement supprimées dès qu'un conteneur était supprimé, cela pourrait entraîner la perte de données importantes pour d'autres conteneurs.
+
+Imaginez que vous ayez plusieurs conteneurs basés sur la même image, et que vous supprimiez l'un de ces conteneurs.
+Si l'image était également supprimée automatiquement, cela affecterait tous les autres conteneurs basés sur cette image, ce qui peut être indésirable.
+
+Cependant, Docker fournit des commandes pour nettoyer les images non utilisées, ce qui vous permet de libérer de l'espace disque sur votre système.
+Vous pouvez utiliser la commande `docker image prune` pour supprimer les images qui ne sont plus utilisées par aucun conteneur. Cela vous permet de garder votre système propre et organisé, en supprimant les images qui ne sont plus nécessaires.
+

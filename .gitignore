@@ -1,0 +1,19 @@
+
+# Ignore virtual environment directory
+.venv/
+
+# Ignore Jupyter notebook checkpoints directories at all levels
+**/.ipynb_checkpoints/
+
+# Ignore other common files and directories
+__pycache__/
+# *.py[cod]
+# *.so
+# *.log
+# *.sqlite
+# *.db
+# *.DS_Store
+# .env
+# .env.*
+# *.env
+# *.env.*

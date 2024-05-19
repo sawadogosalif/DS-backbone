@@ -1,0 +1,118 @@
+
+services:
+  db:
+    image: postgres:11
+    container_name: mlflow_db
+    restart: always
+    expose:
+      - "${PG_PORT}"
+    networks:
+      - backend
+    environment:
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB: ${PG_DATABASE}
+    volumes:
+      - db_data:/var/lib/postgresql/data/
+
+  s3:
+    image: minio/minio:RELEASE.2020-12-18T03-27-42Z
+    container_name: minio_s3
+    volumes:
+      - minio_data:/data
+    ports:
+      - "${MINIO_PORT}:9000"
+    networks:
+      - frontend
+      - backend
+    environment:
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_ACCESS_KEY}
+    command: server /data
+
+  create_buckets:
+    image: minio/mc:RELEASE.2019-07-17T22-13-42Z
+    depends_on:
+      - s3
+    networks:
+      - backend
+    entrypoint: >
+      /bin/sh -c '
+      sleep 5;
+      /usr/bin/mc config host add s3 http://s3:${MINIO_PORT} ${MINIO_ACCESS_KEY} ${MINIO_SECRET_ACCESS_KEY} --api S3v4;
+      [[ ! -z "`/usr/bin/mc ls s3 | grep challenge`" ]] || /usr/bin/mc mb s3/${MLFLOW_BUCKET_NAME};
+      /usr/bin/mc policy download s3/${MLFLOW_BUCKET_NAME};
+      [[ ! -z "`/usr/bin/mc ls s3 | grep challenge`" ]] || /usr/bin/mc mb s3/${DATA_REPO_BUCKET_NAME};
+      /usr/bin/mc policy download s3/${DATA_REPO_BUCKET_NAME};
+      exit 0;
+      '
+
+  tracking_server:
+    build: ./mlflow
+    container_name: mlflow_server
+    restart: always
+    ports:
+      - "${MLFLOW_PORT}:5000"
+    networks:
+      - frontend
+      - backend
+    environment:
+      AWS_ACCESS_KEY_ID: ${MINIO_ACCESS_KEY}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_SECRET_ACCESS_KEY}
+      MLFLOW_S3_ENDPOINT_URL: http://s3:${MINIO_PORT}
+    command: >
+      mlflow server 
+      --backend-store-uri postgresql://${PG_USER}:${PG_PASSWORD}@db:${PG_PORT}/${PG_DATABASE}
+      --host 0.0.0.0
+      --default-artifact-root s3://mlflow/
+
+  jupyterlab:
+    build: ./jupyterlab
+    user: root
+    working_dir: /home/${NB_USER}
+    container_name: jupyterlab
+    image: jupyter/datascience-notebook:latest
+    restart: always
+    ports:
+      - "${JUPYTER_PORT}:8888"
+    networks:
+      - frontend
+      - backend
+    environment:
+      NB_USER: ${NB_USER}
+      CHOWN_HOME: yes
+      JUPYTER_ENABLE_LAB: yes
+      JUPYTERLAB_S3_ENDPOINT: http://s3:${MINIO_PORT}
+      JUPYTERLAB_S3_ACCESS_KEY_ID: ${MINIO_ACCESS_KEY}
+      JUPYTERLAB_S3_SECRET_ACCESS_KEY: ${MINIO_SECRET_ACCESS_KEY}
+      JUPYTER_TOKEN: ${JUPYTER_TOKEN}
+  
+    volumes:
+      - ./notebooks:/home/${NB_USER}/workspace
+      - ./credentials.env:/home/${NB_USER}/workspace/.env
+      - ./jupyterlab/requirements.txt:/home/${NB_USER}/workspace/requirements.txt
+
+  nginx:
+    build: ./nginx
+    container_name: nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - tracking_server
+      - jupyterlab
+      - s3
+    networks:
+      - frontend
+      - backend
+
+volumes:
+  db_data:
+  minio_data:
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
