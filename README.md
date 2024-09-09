@@ -26,8 +26,8 @@ This project sets up a data scientist workbench with :
 
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/your-repo/data-scientist-workbench.git
-   cd data-scientist-workbench
+   git clone https://github.com/sawadogosalif/DS-backbone.git
+   cd DS-backbone
    ```
 
 2. **Configure Environment Variables**
